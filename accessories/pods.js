@@ -5,7 +5,7 @@ const tempOffset = 1;
 const stateTimeout = 30000;  //in ms to min time elapse to call for refresh
 const tempTimeout = 10000;  //in ms to min time elapse before next call for refresh
 const stateRefreshRate = 30000; // Interval for status update
-const fanState = {auto:0, low:25, medium:50, medium_high:75, high:100};
+const fanState = {auto:1, quiet:10, low:25, medium:50, medium_high:75, high:100};
 
 
 /*
@@ -29,14 +29,14 @@ module.exports = function (oAccessory, oService, oCharacteristic, ouuid) {
 		SensiboPodAccessory.prototype.setFanLevel = setFanLevel;
 		SensiboPodAccessory.prototype.identify = identify;
 		SensiboPodAccessory.prototype.autoAI = autoAI;
-	
+
 	}
 	return SensiboPodAccessory;
 };
 module.exports.SensiboPodAccessory = SensiboPodAccessory;
 
 function SensiboPodAccessory(platform, device) {
-	
+
 	this.deviceid = device.id;
 	this.name = device.room.name;
 	this.platform = platform;
@@ -44,13 +44,13 @@ function SensiboPodAccessory(platform, device) {
 	this.debug = platform.debug;
 	this.state = {};
 	this.temp = {};
-	
+
 	var idKey = "hbdev:sensibo:pod:" + this.deviceid;
 	var id = uuid.generate(idKey);
-	
+
 	Accessory.call(this, this.name, id);
 	var that = this;
-	
+
 	var batteryMaxVoltage = 3000; // 3.0V (logical full capacity)
 	var batteryMinVoltage = 2600; // 2.6V (estimated)
 
@@ -83,24 +83,24 @@ function SensiboPodAccessory(platform, device) {
 	// Manufacturer characteristic
 	this.getService(Service.AccessoryInformation)
 		.setCharacteristic(Characteristic.Manufacturer, "homebridge-sensibo-sky");
-	
-	// Model characteristic	
+
+	// Model characteristic
 	this.getService(Service.AccessoryInformation)
 		.setCharacteristic(Characteristic.Model, "version 0.2.1");
-	
+
 	// SerialNumber characteristic
 	this.getService(Service.AccessoryInformation)
 		.setCharacteristic(Characteristic.SerialNumber, "Pod ID: " + that.deviceid);
-	
-	// Thermostat Service	
+
+	// Thermostat Service
 	// Current Heating/Cooling Mode characteristic
 
-	this.addService(Service.Thermostat);	
+	this.addService(Service.Thermostat);
 
 	this.getService(Service.Thermostat)
 		.getCharacteristic(Characteristic.CurrentHeatingCoolingState)
 		.on("get", function (callback) {
-		
+
 			//that.log(that.deviceid,":",(new Date()).getTime(),":GetCurrentHeatingCoolingState: ", that.state);
 			if (!that.state.on) { // Convert state.on parameter to TargetHeatingCoolingState
 				callback(null, Characteristic.TargetHeatingCoolingState.OFF);
@@ -128,7 +128,7 @@ function SensiboPodAccessory(platform, device) {
 	this.getService(Service.Thermostat)
 		.getCharacteristic(Characteristic.TargetHeatingCoolingState)
 		.on("get", function (callback) {
-		
+
 			//that.log(that.deviceid,":",(new Date()).getTime(),":GetTargetHeatingCoolingState: ", that.state);
 			if (!that.state.on) { // Convert state.on parameter to TargetHeatingCoolingState
 				//that.log(that.deviceid,":",(new Date()).getTime(),":GetTargetHeatingCoolingState: OFF:",Characteristic.TargetHeatingCoolingState.OFF);
@@ -154,7 +154,7 @@ function SensiboPodAccessory(platform, device) {
 		.on("set", function (value, callback) {
 			that.log(that.name, "State change set, current ACstate:", that.state.mode, " new state:", value);
 			//that.log(that.name," State value -",Characteristic.TargetHeatingCoolingState.COOL,Characteristic.TargetHeatingCoolingState.OFF);
-			
+
 			switch (value) {
 				case Characteristic.TargetHeatingCoolingState.OFF:
 					that.state.on = false;
@@ -182,7 +182,7 @@ function SensiboPodAccessory(platform, device) {
 					that.state.mode = "cool";
 					that.state.on = false;
 					break;
-			};		
+			};
 
 			that.log(that.name," - Submit state change: New state: ", that.state.mode, "On/Off Status:", that.state.on);
 			that.platform.api.submitState(that.deviceid, that.state, function(data){
@@ -191,7 +191,7 @@ function SensiboPodAccessory(platform, device) {
 				}
 			});
 			callback();
-			
+
 		});
 
 	// Current Temperature characteristic
@@ -207,10 +207,10 @@ function SensiboPodAccessory(platform, device) {
 		.getCharacteristic(Characteristic.TargetTemperature)
 		.on("get", function(callback) {
 			//that.log(that.deviceid,":",(new Date()).getTime(),":GetTargetTemperature: :",that.state.targetTemperature);
-			callback(null, that.state.targetTemperature); 	
+			callback(null, that.state.targetTemperature);
 		})
 		.on("set", function(value, callback) {
-			
+
 			// limit temperature to Sensibo standards
 			if (value <= 16.0)
 				value = 16.0;
@@ -242,7 +242,7 @@ function SensiboPodAccessory(platform, device) {
 
 			that.log ("[DEBUG temp] ",that.name, " Cur Target temp:",that.state.targetTemperature, " new targetTemp: ", newTargetTemp );
 			if (that.state.targetTemperature !== newTargetTemp) {   // only send if it had changed
-				
+
 				that.state.targetTemperature = newTargetTemp;
 				that.log(that.name," Submit new target temperature: ",that.state.targetTemperature);
 				that.platform.api.submitState(that.deviceid, that.state, function(data){
@@ -253,9 +253,9 @@ function SensiboPodAccessory(platform, device) {
 
 			}
 			callback();
-			
+
 		});
-		
+
 	// Cooling Threshold Temperature Characteristic
 	this.getService(Service.Thermostat)
 		.getCharacteristic(Characteristic.CoolingThresholdTemperature)
@@ -268,36 +268,36 @@ function SensiboPodAccessory(platform, device) {
 			that.coolingThresholdTemperature = value;
 			//that.coolingThresholdTemperature = that.temp.temperature;
 		});
-	
+
 	// Temperature Display Units characteristic
 	this.getService(Service.Thermostat)
 		.getCharacteristic(Characteristic.TemperatureDisplayUnits)
 		.on("get", function(callback) {
 			if (that.state.temperatureUnit=="F")
-				callback(null, Characteristic.TemperatureDisplayUnits.FAHRENHEIT); 	
+				callback(null, Characteristic.TemperatureDisplayUnits.FAHRENHEIT);
 			else
-				callback(null, Characteristic.TemperatureDisplayUnits.CELSIUS); 	
+				callback(null, Characteristic.TemperatureDisplayUnits.CELSIUS);
 		});
-		
+
 	// Battery Level characteristic
 	this.getService(Service.Thermostat)
 		.addCharacteristic(Characteristic.BatteryLevel)
 		.on("get", function(callback) {
-		
+
 			// Convert battery level in mV to percentage
 			var batteryPercentage;
-		
+
 			if (that.temp.battery >= batteryMaxVoltage)
 				var batteryPercentage = 100;
 			else if (that.temp.battery <= batteryMinVoltage)
 				var batteryPercentage = 0;
 			else
 				var batteryPercentage = (that.temp.battery - batteryMinVoltage) / (batteryMaxVoltage - batteryMinVoltage);
-			
+
 			callback(null, batteryPercentage);
 		});
-	
-		
+
+
 	// Fan Service
 	// On Characteristic
 	// that.log(device.id,"AI State:",that.state.AI, " hideFan: ",that.state.hideFan);
@@ -324,7 +324,7 @@ function SensiboPodAccessory(platform, device) {
 						}
 					});
 				});
-				
+
 			// Rotation Speed characteristic
 			this.getService(Service.Fan)
 				.addCharacteristic(Characteristic.RotationSpeed)
@@ -357,7 +357,7 @@ function SensiboPodAccessory(platform, device) {
 					that.setFanLevel(that, value);
 				});
 			}
-		} 
+		}
 	// Relative Humidity Service
 	// Current Relative Humidity characteristic
 	if (that.state.hideHumidity) {
@@ -374,7 +374,7 @@ function SensiboPodAccessory(platform, device) {
 			.getCharacteristic(Characteristic.CurrentRelativeHumidity)
 			.on("get", function(callback) {
 				callback(null, Math.round(that.temp.humidity)); // int value
-			});		
+			});
 	}
 
 
@@ -388,8 +388,10 @@ function setFanLevel(that, value) {
 	if (that.state.hideFan) {
 		that.state.fanLevel = "high";
 	} else {
-		if (value == 0) {
+		if (value === 1) {
 			that.state.fanLevel = "auto";
+		} else if (value <= 10) {
+			that.state.fanLevel = "quiet"
 		} else if (value <= 40) {
 			that.state.fanLevel = "low";
 		} else if (value <= 50) {
@@ -398,7 +400,7 @@ function setFanLevel(that, value) {
 			that.state.fanLevel = "medium_high";
 		} else if (value <= 100) {
 			that.state.fanLevel = "high";
-		} 
+		}
 	}
 
 	if ((curFanState != that.state.fanLevel) && (that.state.fanLevel!== undefined)) {
@@ -416,7 +418,7 @@ function setFanLevel(that, value) {
 			//}
 		});
 	} else {
-		// that.log ("No need to set ");			
+		// that.log ("No need to set ");
 	}
 
 
@@ -456,21 +458,21 @@ function refreshState(callback) {
 	// This prevents this from running more often
 	var that=this;
 	var rightnow = new Date();
-	
+
 	//that.log(that.deviceid,":refreshState - timelapse:",(that.state.updatetime) ?(rightnow.getTime() - that.state.updatetime.getTime()) : 0, " - State: ",that.state);
 
-	if (that.state.updatetime && (rightnow.getTime()-that.state.updatetime.getTime())<stateTimeout) { 
+	if (that.state.updatetime && (rightnow.getTime()-that.state.updatetime.getTime())<stateTimeout) {
 		if (callback !== undefined) callback();
 		return
 	}
-	if (!that.state.updatetime) that.state.updatetime = rightnow; 
+	if (!that.state.updatetime) that.state.updatetime = rightnow;
 	// Update the State
 	that.platform.api.getState(that.deviceid, function(acState) {
 		if (acState !== undefined ) {
 			that.state.targetTemperature = acState.targetTemperature;
 			that.state.temperatureUnit = acState.temperatureUnit;
 			that.state.on = acState.on;
-			
+
 			that.state.mode = acState.mode;
 			that.state.fanLevel = acState.fanLevel;
 			that.state.updatetime = new Date(); // Set our last update time.
@@ -478,23 +480,23 @@ function refreshState(callback) {
 
 			if (that.state.AI) that.autoAI(that);
 		}
-		
+
 		callback();
-	});		
+	});
 }
-	
+
 function refreshTemperature(callback) {
-	// This prevents this from running more often 
+	// This prevents this from running more often
 	var that=this;
 	var rightnow = new Date();
-	
+
 	//that.log(that.deviceid,":refreshTemperature - timelapse:",(that.temp.updatetime)?(rightnow.getTime() - that.temp.updatetime.getTime()):0, " - Temp: ",that.temp);
 
-	if (that.temp.updatetime && (rightnow.getTime()-that.temp.updatetime.getTime())<tempTimeout) { 
+	if (that.temp.updatetime && (rightnow.getTime()-that.temp.updatetime.getTime())<tempTimeout) {
 		if (callback !== undefined) callback();
 		return
 	}
-	if (!that.temp.updatetime) that.state.updatetime = rightnow; 
+	if (!that.temp.updatetime) that.state.updatetime = rightnow;
 	// Update the Temperature
 	var data;
 	that.platform.api.getMeasurements(that.deviceid, function(myData) {
@@ -514,17 +516,17 @@ function refreshAll(callback) {
 	//console.log("[%s: Refreshing all for %s]",(new Date()),that.name);
 	this.refreshState(function() { that.refreshTemperature(callback); });
 }
-	
+
 function loadData() {
 	var that = this;
-	this.refreshAll(function() { 
+	this.refreshAll(function() {
 	// Refresh the status on home App
 		for (var i = 0; i < that.services.length; i++) {
 			for (var j = 0; j < that.services[i].characteristics.length; j++) {
 				that.services[i].characteristics[j].getValue();
 			}
 		}
-	});			
+	});
 }
 
 function getServices() {
