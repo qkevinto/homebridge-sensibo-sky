@@ -5,8 +5,7 @@ const tempOffset = 1;
 const stateTimeout = 30000;  //in ms to min time elapse to call for refresh
 const tempTimeout = 10000;  //in ms to min time elapse before next call for refresh
 const stateRefreshRate = 30000; // Interval for status update
-const fanState = {auto:1, quiet:15, low:25, medium:50, medium_high:75, high:100};
-
+const fanState = { quiet: 15, low: 25, auto: 50, medium: 60, mediumHigh: 75, high: 100 };
 
 /*
  *   Pod Accessory
@@ -388,15 +387,15 @@ function setFanLevel(that, value) {
 	if (that.state.hideFan) {
 		that.state.fanLevel = "high";
 	} else {
-		if (value <= 5) {
-			that.state.fanLevel = "auto";
-		} else if (value <= fanState.quiet) {
+		if (value <= fanState.quiet) {
 			that.state.fanLevel = "quiet"
 		} else if (value <= fanState.low) {
 			that.state.fanLevel = "low";
+		} else if (value > 40 && value < 60) {
+			that.state.fanLevel = "auto";
 		} else if (value <= fanState.medium) {
 			that.state.fanLevel = "medium"
-		} else if (value <= fanState.medium_high) {
+		} else if (value <= fanState.mediumHigh) {
 			that.state.fanLevel = "medium_high";
 		} else if (value <= fanState.high) {
 			that.state.fanLevel = "high";
@@ -538,10 +537,5 @@ function identify() {
 }
 
 function logStateChange(that) {
-	that.log("Changed status (name: %s, roomTemp: %s, on: %s, mode: %s, targetTemp: %s, speed: %s)", that.name,
-																									 that.temp.temperature,
-																									 that.state.on,
-																		 							 that.state.mode,
-																									 that.state.targetTemperature,
-																									 that.state.fanLevel);
+	that.log("Changed status (name: %s, roomTemp: %s, on: %s, mode: %s, targetTemp: %s, speed: %s)", that.name, that.temp.temperature, that.state.on, that.state.mode, that.state.targetTemperature, that.state.fanLevel);
 }
